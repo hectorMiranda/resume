@@ -41,7 +41,7 @@ interface InfoPanelProps {
 
 export default function InfoPanel({ activeSection, data }: InfoPanelProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-lg text-white p-4 md:p-6 max-h-[45vh] overflow-y-auto border-t border-gray-800 shadow-lg transition-all duration-300 ease-in-out">
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-lg text-white p-4 md:p-6 max-h-[45vh] overflow-y-auto border-t border-gray-800 shadow-lg transition-all duration-300 ease-in-out info-panel">
       <div className="max-w-7xl mx-auto">
         {activeSection === "about" && (
           <div className="animate-fadeIn">

@@ -17,7 +17,7 @@ export default function LoadingScreen() {
   }, [])
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-gradient-to-b from-black to-blue-950/30">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-gradient-to-b from-black to-blue-950/30 loading-screen">
       <div className="w-full max-w-md px-8 py-12 flex flex-col items-center backdrop-blur-lg bg-black/30 rounded-2xl border border-gray-800/50 shadow-2xl">
         <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">Hector Miranda</h1>
         <h2 className="text-xl text-blue-400 mb-12 font-light">Software Engineer & Solutions Architect</h2>

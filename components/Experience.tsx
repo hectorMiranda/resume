@@ -13,6 +13,7 @@ export default function Experience() {
   const [loading, setLoading] = useState(true)
   const [activeSection, setActiveSection] = useState("about")
   const [cameraPosition, setCameraPosition] = useState({ x: 5, y: 2, z: 5 })
+  const [isMobile, setIsMobile] = useState(false)
 
   // Hector Miranda's data
   const experienceData = {
@@ -240,6 +241,15 @@ export default function Experience() {
   useEffect(() => {
     if (!containerRef.current) return
 
+    // Check if device is mobile
+    const checkIfMobile = () => {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+        || window.innerWidth < 768;
+    };
+    
+    const mobileDevice = checkIfMobile();
+    setIsMobile(mobileDevice);
+
     // Scene setup
     const scene = new THREE.Scene()
     scene.background = new THREE.Color(0x0a0a0a)
@@ -249,11 +259,25 @@ export default function Experience() {
     camera.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z)
 
     // Renderer setup
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    const renderer = new THREE.WebGLRenderer({ 
+      antialias: !mobileDevice, // Disable antialiasing on mobile
+      alpha: true,
+      powerPreference: 'high-performance'
+    })
     renderer.setSize(window.innerWidth, window.innerHeight)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.shadowMap.enabled = true
+    // Lower pixel ratio for mobile devices
+    renderer.setPixelRatio(mobileDevice ? Math.min(window.devicePixelRatio, 1.5) : Math.min(window.devicePixelRatio, 2))
+    renderer.shadowMap.enabled = !mobileDevice ? true : false
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    
+    // Make sure the renderer is positioned in the background
+    renderer.domElement.style.position = 'fixed'
+    renderer.domElement.style.top = '0'
+    renderer.domElement.style.left = '0'
+    renderer.domElement.style.width = '100%'
+    renderer.domElement.style.height = '100%'
+    renderer.domElement.style.zIndex = '-1' // Ensure it's in the background
+    renderer.domElement.style.pointerEvents = 'none' // Don't intercept mouse events
     containerRef.current.appendChild(renderer.domElement)
 
     // Controls
@@ -263,6 +287,8 @@ export default function Experience() {
     controls.minDistance = 3
     controls.maxDistance = 10
     controls.maxPolarAngle = Math.PI / 2 - 0.1
+    controls.enableZoom = !mobileDevice // Disable zoom on mobile for better performance
+    controls.enablePan = !mobileDevice // Disable panning on mobile for better performance
 
     // Lights
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
@@ -270,19 +296,33 @@ export default function Experience() {
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1)
     directionalLight.position.set(5, 5, 5)
-    directionalLight.castShadow = true
-    directionalLight.shadow.mapSize.width = 2048
-    directionalLight.shadow.mapSize.height = 2048
+    
+    // Only enable shadow casting on desktop
+    if (!mobileDevice) {
+      directionalLight.castShadow = true
+      directionalLight.shadow.mapSize.width = 2048
+      directionalLight.shadow.mapSize.height = 2048
+    } else {
+      // Use smaller shadow maps on mobile
+      directionalLight.castShadow = false
+    }
     scene.add(directionalLight)
 
-    // Grid helper
-    const gridHelper = new THREE.GridHelper(20, 20, 0x555555, 0x333333)
-    scene.add(gridHelper)
+    // Grid helper - only add on desktop
+    if (!mobileDevice) {
+      const gridHelper = new THREE.GridHelper(20, 20, 0x555555, 0x333333)
+      scene.add(gridHelper)
+    } else {
+      // Simpler grid for mobile
+      const gridHelper = new THREE.GridHelper(20, 10, 0x555555, 0x333333)
+      scene.add(gridHelper)
+    }
 
-    // Create 3D objects
-
+    // Create 3D objects with appropriate complexity based on device
+    const platformDetail = mobileDevice ? 16 : 32; // Reduce geometry complexity on mobile
+    
     // Central platform
-    const platformGeometry = new THREE.CylinderGeometry(5, 5, 0.5, 32)
+    const platformGeometry = new THREE.CylinderGeometry(5, 5, 0.5, platformDetail)
     const platformMaterial = new THREE.MeshStandardMaterial({
       color: 0x333333,
       metalness: 0.8,
@@ -290,15 +330,22 @@ export default function Experience() {
     })
     const platform = new THREE.Mesh(platformGeometry, platformMaterial)
     platform.position.y = -0.25
-    platform.receiveShadow = true
+    platform.receiveShadow = !mobileDevice // Only receive shadows on desktop
     scene.add(platform)
 
     // About section - central hologram
     const aboutGroup = new THREE.Group()
     scene.add(aboutGroup)
 
-    // Create holographic profile
-    const hologramGeometry = new THREE.CylinderGeometry(1.5, 1.5, 3, 32, 1, true)
+    // Create holographic profile - simpler on mobile
+    const hologramGeometry = new THREE.CylinderGeometry(
+      1.5,
+      1.5,
+      mobileDevice ? 2 : 3,
+      mobileDevice ? 16 : 32,
+      1,
+      true
+    )
     const hologramMaterial = new THREE.MeshStandardMaterial({
       color: 0x4a88ff,
       emissive: 0x1a28ff,
@@ -357,15 +404,21 @@ export default function Experience() {
       return null
     }
 
-    // Add key info around hologram
+    // Add key info around hologram - fewer items on mobile
     const keyInfo = [
       { text: "Senior Software Engineer", position: new THREE.Vector3(0, 3, 0), color: 0x4a88ff },
       { text: "Solutions Architect", position: new THREE.Vector3(0, 2.5, 0), color: 0x4a88ff },
-      { text: "Real-time Web Applications", position: new THREE.Vector3(2, 1.5, 1), color: 0x88ff4a },
-      { text: "C#/.NET Core Expert", position: new THREE.Vector3(-2, 1.5, -1), color: 0xff4a88 },
-      { text: "React & WebSockets", position: new THREE.Vector3(-2, 1.5, 1), color: 0x88ff4a },
-      { text: "Blockchain Solutions", position: new THREE.Vector3(2, 1.5, -1), color: 0xff4a88 },
     ]
+    
+    // Add more items only on desktop
+    if (!mobileDevice) {
+      keyInfo.push(
+        { text: "Real-time Web Applications", position: new THREE.Vector3(2, 1.5, 1), color: 0x88ff4a },
+        { text: "C#/.NET Core Expert", position: new THREE.Vector3(-2, 1.5, -1), color: 0xff4a88 },
+        { text: "React & WebSockets", position: new THREE.Vector3(-2, 1.5, 1), color: 0x88ff4a },
+        { text: "Blockchain Solutions", position: new THREE.Vector3(2, 1.5, -1), color: 0xff4a88 }
+      )
+    }
 
     keyInfo.forEach((info) => {
       const textElement = createTextElement(info.text, info.position, info.color)
@@ -917,9 +970,21 @@ export default function Experience() {
 
     // Handle window resize
     const handleResize = () => {
+      // Update camera aspect ratio
       camera.aspect = window.innerWidth / window.innerHeight
       camera.updateProjectionMatrix()
+      
+      // Update renderer size
       renderer.setSize(window.innerWidth, window.innerHeight)
+      
+      // Check if device type has changed (e.g., orientation change)
+      const newMobileStatus = checkIfMobile();
+      if (newMobileStatus !== isMobile) {
+        setIsMobile(newMobileStatus);
+        // Adjust renderer settings based on new device status
+        renderer.setPixelRatio(newMobileStatus ? Math.min(window.devicePixelRatio, 1.5) : Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = !newMobileStatus;
+      }
     }
 
     window.addEventListener("resize", handleResize)
@@ -942,22 +1007,33 @@ export default function Experience() {
 
     window.addEventListener("click", handleClick)
 
-    // Animation loop
+    // Animation loop with performance optimization
     const clock = new THREE.Clock()
-
+    
     const animate = () => {
+      requestAnimationFrame(animate)
+      
+      // Get elapsed time for animations
       const elapsedTime = clock.getElapsedTime()
+      
+      // Throttle animation updates on mobile devices
+      if (mobileDevice && Math.round(elapsedTime * 60) % 2 !== 0) {
+        return; // Skip every other frame on mobile for better performance
+      }
+
+      // Update controls - use gentler rotation on mobile
+      controls.update()
+
+      // Animate with less intensity on mobile
+      const rotationSpeed = mobileDevice ? 0.1 : 0.2;
+      
+      // Animate floating objects with less complexity on mobile
+      if (activeSection === "about" && aboutGroup) {
+        aboutGroup.rotation.y = elapsedTime * rotationSpeed;
+      }
 
       // Animate particles
       particlesMesh.rotation.y = elapsedTime * 0.05
-
-      // Rotate about hologram
-      if (aboutGroup.visible) {
-        aboutGroup.rotation.y = elapsedTime * 0.2
-      }
-
-      // Update controls
-      controls.update()
 
       // Update raycaster
       raycaster.setFromCamera(mouse, camera)
@@ -992,14 +1068,11 @@ export default function Experience() {
         }
       }
 
-      // Render
+      // Render scene
       renderer.render(scene, camera)
-
-      // Call animate again on the next frame
-      window.requestAnimationFrame(animate)
     }
 
-    // Start animation
+    // Start the animation loop
     animate()
 
     // Show loading screen for a bit
@@ -1043,7 +1116,7 @@ export default function Experience() {
 
       renderer.dispose()
     }
-  }, [activeSection])
+  }, [cameraPosition])
 
   // Handle section change
   useEffect(() => {
@@ -1077,11 +1150,23 @@ export default function Experience() {
   }
 
   return (
-    <div className="relative w-full h-screen">
-      {loading && <LoadingScreen />}
-      <div ref={containerRef} className="w-full h-full" />
+    <div className="relative w-full h-screen overflow-hidden">
+      <div ref={containerRef} className="absolute inset-0 -z-10" aria-hidden="true"></div>
+      
+      {isMobile && (
+        <div className="fixed bottom-20 left-4 z-30 text-xs text-gray-500 opacity-50 pointer-events-none">
+          Mobile optimized rendering
+        </div>
+      )}
+      
       <Navbar activeSection={activeSection} onSectionChange={handleSectionChange} />
-      <InfoPanel activeSection={activeSection} data={experienceData} />
+      
+      {loading && <LoadingScreen />}
+      
+      <InfoPanel
+        activeSection={activeSection}
+        data={experienceData}
+      />
     </div>
   )
 }
