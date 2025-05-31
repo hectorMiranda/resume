@@ -1,0 +1,1 @@
+This is a starter KiCad project for a business card-style PCB with QR code and LEDs.
